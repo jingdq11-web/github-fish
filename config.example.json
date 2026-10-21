@@ -1,0 +1,34 @@
+{
+  "github": {
+    "token": "",
+    "user": "your-github-username",
+    "repos": [
+      "your-github-username/your-repo"
+    ],
+    "poll_interval": 90,
+    "watch": {
+      "star": true,
+      "fork": true,
+      "issue": true,
+      "pull_request": true,
+      "release": true,
+      "push": false,
+      "ci": true
+    }
+  },
+  "pet": {
+    "enabled": true,
+    "bridge_exe": "D:\\deepseek\\蓝色大肥鱼\\BigBlueFish.Mcp.exe",
+    "quiet_hours": [],
+    "speak_prefix": ""
+  },
+  "actions": {
+    "star": "工作状态-雀跃庆祝",
+    "fork": "点击回应-开心跃动",
+    "issue": "工作状态-思考冒泡",
+    "pull_request": "工作状态-清点归档",
+    "release": "放烟花",
+    "ci_fail": "工作状态-垂头叹气冒汗",
+    "ci_ok": "工作状态-雀跃庆祝"
+  }
+}

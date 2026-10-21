@@ -1,0 +1,22 @@
+# 本地配置（含 token，绝对不要提交）
+config.json
+
+# 运行状态（记录已播报的事件）
+state.json
+state.json.tmp
+
+# 日志
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+.DS_Store
