@@ -1,5 +1,7 @@
 # 本地配置（含 token，绝对不要提交）
 config.json
+config.json.*
+*.bak
 
 # 运行状态（记录已播报的事件）
 state.json
