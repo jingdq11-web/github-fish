@@ -23,6 +23,7 @@ github-fish — 让你的桌面宠物替你看 GitHub
 import argparse
 import json
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -195,6 +196,11 @@ class PetClient:
         }, timeout=20)
         if not result:
             log("MCP 握手失败（桌宠可能没启动，或没开启 MCP 接口）")
+            try:
+                self.proc.terminate()
+            except Exception:
+                pass
+            self.proc = None
             return False
         self._notify({"jsonrpc": "2.0", "method": "notifications/initialized"})
         self.alive = True
@@ -269,20 +275,81 @@ class GitHub:
 
     def __init__(self, token=""):
         self.token = token or ""
+        self._gh_token = None
+        self._gh_tried = False
+        self._warned_gh = False
 
-    def _get(self, path):
+    def _gh_exe(self):
+        found = shutil.which("gh")
+        if found:
+            return found
+        for cand in (r"C:\Program Files\GitHub CLI\gh.exe",
+                     r"C:\Program Files (x86)\GitHub CLI\gh.exe"):
+            if os.path.exists(cand):
+                return cand
+        return None
+
+    def _from_gh(self):
+        """配置里没填 token 时，向本机 gh 借一个。
+
+        gh 的 token 存在系统凭据管理器里，重新登录就会换新的。
+        从它这儿借，就不用每次手动同步配置文件。
+        """
+        if self._gh_tried:
+            return self._gh_token
+        self._gh_tried = True
+        exe = self._gh_exe()
+        if not exe:
+            return None
+        try:
+            r = subprocess.run([exe, "auth", "token"], capture_output=True,
+                               text=True, timeout=15, creationflags=NO_CONSOLE)
+            self._gh_token = (r.stdout or "").strip() or None
+        except Exception:
+            pass
+        if self._gh_token and not self._warned_gh:
+            self._warned_gh = True
+            log("配置里没有 token，已改用本机 gh 的 token")
+        return self._gh_token
+
+    def _auth_token(self):
+        return self.token or self._from_gh()
+
+    def _get(self, path, _retry=True):
         url = self.API + path
         req = urllib.request.Request(url)
         req.add_header("Accept", "application/vnd.github+json")
         req.add_header("User-Agent", "github-fish")
-        if self.token:
-            req.add_header("Authorization", "Bearer " + self.token)
+        token = self._auth_token()
+        if token:
+            req.add_header("Authorization", "Bearer " + token)
         try:
             with urllib.request.urlopen(req, timeout=20) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
+            if e.code == 401 and _retry:
+                # 卡过期或被撤了。别死攥着它，换一张再试一次。
+                if self.token:
+                    log("配置里的 token 已失效（401），改用本机 gh 的 token 再试")
+                    self.token = ""
+                    return self._get(path, _retry=False)
+                if self._gh_token:
+                    log("本机 gh 的 token 也失效了（401），请重新 gh auth login")
+                    self._gh_token = None
+                    self._gh_tried = False
+                    return self._get(path, _retry=False)
             if e.code == 403:
-                log("GitHub API 403（可能是速率限制，未配置 token 时每小时只有 60 次）")
+                left = ""
+                reset = e.headers.get("X-RateLimit-Reset")
+                if reset:
+                    try:
+                        secs = max(0, int(reset) - int(time.time()))
+                        left = "，约 %d 分钟后恢复" % (secs // 60 + (1 if secs % 60 else 0))
+                    except Exception:
+                        pass
+                log("GitHub API 403（被限流%s；没带 token 每小时只有 60 次）" % left)
+            elif e.code == 401:
+                log("GitHub API 401（token 无效或已过期，请重新登录 gh 或改配置）")
             elif e.code == 404:
                 log("GitHub API 404: %s" % path)
             else:
@@ -486,10 +553,27 @@ def single_instance():
         return None
 
 
+def pet_app_running(app_exe):
+    """桌宠本体（不是 MCP 桥）是否在跑。用 tasklist 判断，不引入额外依赖。"""
+    name = os.path.basename(app_exe)
+    if not name:
+        return True
+    try:
+        r = subprocess.run(["tasklist", "/FI", "IMAGENAME eq %s" % name, "/NH"],
+                           capture_output=True, text=True, encoding="gbk",
+                           errors="replace", timeout=10, creationflags=NO_CONSOLE)
+        return name.lower() in (r.stdout or "").lower()
+    except Exception:
+        # 查不出来就当它在跑，免得重复拉起
+        return True
+
+
 def main():
     ap = argparse.ArgumentParser(description="让桌面宠物替你看 GitHub")
     ap.add_argument("--once", action="store_true", help="只轮询一次")
     ap.add_argument("--test", action="store_true", help="测试宠物连接")
+    ap.add_argument("--wait-pet", type=int, default=30,
+                    help="桌宠还没就绪时最多等多少秒（默认 30，0 表示不等）")
     args = ap.parse_args()
 
     cfg = load_config()
@@ -500,10 +584,28 @@ def main():
 
     pet = None
     if cfg["pet"].get("enabled", True):
-        pet = PetClient(cfg["pet"]["bridge_exe"])
-        if not pet.start():
-            log("宠物连接失败，将只打印到控制台（不播报）")
-            pet = None
+        # 桌宠要几秒加载模型。开机自启时它往往还没起来，
+        # 这里等一会儿，别一上来就放弃、变成只会写日志的哑巴。
+        app_exe = cfg["pet"].get("app_exe", "")
+        if app_exe and os.path.isfile(app_exe) and not pet_app_running(app_exe):
+            log("桌宠没在跑，先把它叫起来")
+            try:
+                subprocess.Popen([app_exe], cwd=os.path.dirname(app_exe),
+                                 creationflags=NO_CONSOLE)
+            except Exception as e:
+                log("启动桌宠失败: %s" % e)
+
+        deadline = time.time() + max(0, args.wait_pet)
+        while True:
+            pet = PetClient(cfg["pet"]["bridge_exe"])
+            if pet.start():
+                break
+            if time.time() >= deadline:
+                log("桌宠 %d 秒内没就绪，本次只写日志不播报" % args.wait_pet)
+                pet = None
+                break
+            log("桌宠还没就绪，3 秒后重试")
+            time.sleep(3)
 
     if args.test:
         if pet:

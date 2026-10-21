@@ -178,9 +178,14 @@ python stop_github_fish.py
 ### 调试用参数
 
 ```bash
-python github_fish.py --test   # 测试桌宠连接，不做轮询
-python github_fish.py --once   # 只轮询一次，方便排查
+python github_fish.py --test              # 测试桌宠连接，不做轮询
+python github_fish.py --once              # 只轮询一次，方便排查
+python github_fish.py --wait-pet 120      # 桌宠还没起来时最多等 120 秒（默认 30）
 ```
+
+**为什么要等桌宠：** 它启动要几秒加载模型。开机自启时监视线程往往比桌宠先起来，
+一上来就连不上、退化成「只写日志不播报」——你以为它在盯，其实是个哑巴。
+`--wait-pet` 就是让它在门口等一会儿。
 
 ---
 
@@ -188,12 +193,13 @@ python github_fish.py --once   # 只轮询一次，方便排查
 
 | 字段 | 说明 |
 |---|---|
-| `github.token` | Personal Access Token。留空也能用，但每小时只有 60 次请求 |
+| `github.token` | Personal Access Token。**留空会自动借用本机 `gh` 的 token**；`gh` 也没登录时才退回匿名，每小时只有 60 次 |
 | `github.user` | 你的用户名，会监控你的公开事件流 |
 | `github.repos` | 要监控的仓库列表，格式 `owner/repo` |
 | `github.poll_interval` | 轮询间隔（秒），最低 30，默认 90 |
 | `github.watch` | 每种事件是否播报，`push` 默认关（太吵） |
 | `pet.enabled` | 是否驱动桌宠，关掉就只写日志 |
+| `pet.app_exe` | 桌宠本体程序路径。填了就在它没运行时自动叫起来；留空则不动 |
 | `pet.bridge_exe` | 桌宠 MCP 桥接程序路径 |
 | `pet.quiet_hours` | 静默时段，如 `[23, 8]` 表示 23 点到次日 8 点只记录不播报 |
 | `pet.speak_prefix` | 每句话的前缀，比如填 `"乐，"` 就是「乐，有人 star 了！」 |
@@ -201,9 +207,16 @@ python github_fish.py --once   # 只轮询一次，方便排查
 
 ### 关于 token
 
-不填也能跑，但 GitHub 对未认证请求限制 **每小时 60 次**。监控多个仓库、间隔又短的话很容易撞上限。
+不填也能跑，GitHub 对未认证请求限制 **每小时 60 次**。监控多个仓库、间隔又短的话很容易撞上限。
 
-生成方式：GitHub → Settings → Developer settings → Personal access tokens → **Fine-grained tokens** → 只勾 `public_repo` 读权限就够（私有仓库才需要 `repo`）。
+**三种拿法，按方便程度排：**
+
+1. **什么都不填**（推荐）—— 只要本机装了 [GitHub CLI](https://cli.github.com/) 并登录过（`gh auth login`），程序会自动借它的 token。你重新登录换了新卡，这边不用改配置。
+2. **填你自己的** —— GitHub → Settings → Developer settings → Personal access tokens → **Fine-grained tokens** → 只勾 `public_repo` 读权限就够（私有仓库才需要 `repo`）。
+3. **留空** —— 上面的都没有，退回匿名 60 次。
+
+**卡失效时会怎样：** 程序发现 401 会自动丢掉失效的卡、换一张重试，并把原因写进日志。
+如果两张卡都失效，日志会明确写「请重新登录 gh 或改配置」——不会假装还在工作。
 
 ---
 

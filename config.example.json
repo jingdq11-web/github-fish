@@ -18,6 +18,7 @@
   },
   "pet": {
     "enabled": true,
+    "app_exe": "",
     "bridge_exe": "D:\\deepseek\\蓝色大肥鱼\\BigBlueFish.Mcp.exe",
     "quiet_hours": [],
     "speak_prefix": ""
