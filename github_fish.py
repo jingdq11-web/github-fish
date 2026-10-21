@@ -31,7 +31,13 @@ import time
 import urllib.error
 import urllib.request
 
-APP_DIR = os.path.dirname(os.path.abspath(__file__))
+if getattr(sys, "frozen", False):
+    # PyInstaller 打包后 __file__ 指向临时解包目录，
+    # 配置和状态必须放在 exe 旁边，否则每次运行都会丢配置。
+    APP_DIR = os.path.dirname(os.path.abspath(sys.executable))
+else:
+    APP_DIR = os.path.dirname(os.path.abspath(__file__))
+
 CONFIG_FILE = os.path.join(APP_DIR, "config.json")
 EXAMPLE_FILE = os.path.join(APP_DIR, "config.example.json")
 STATE_FILE = os.path.join(APP_DIR, "state.json")
@@ -90,7 +96,12 @@ EVENT_KIND = {
 
 def log(msg):
     line = "[%s] %s" % (time.strftime("%Y-%m-%d %H:%M:%S"), msg)
-    print(line, flush=True)
+    # 打包成 --noconsole 的 exe 后 sys.stdout 是 None，直接 print 会抛异常
+    try:
+        if sys.stdout is not None:
+            print(line, flush=True)
+    except Exception:
+        pass
     try:
         with open(LOG_FILE, "a", encoding="utf-8") as f:
             f.write(line + "\n")
