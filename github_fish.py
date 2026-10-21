@@ -392,6 +392,12 @@ class Watcher:
     def poll_once(self):
         items = self.collect_events()
         if not items:
+            # 即使这次没拉到任何事件，也要把 initialized 落盘。
+            # 否则下次真来事件时会被当成"首次运行"整批跳过。
+            if not self.state.get("initialized"):
+                self.state["initialized"] = True
+                save_state(self.state)
+                log("首次运行，暂无事件，已记录基线")
             return 0
 
         first_run = not self.state.get("initialized")
