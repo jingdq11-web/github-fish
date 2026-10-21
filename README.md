@@ -6,8 +6,16 @@
 
 你写代码的时候，桌角有个东西真的在"关心"你的进度。
 
-> 这是给 [蓝色大肥鱼](https://github.com/Bai-Cute/big-blue-fish-desktop-pet) 写的，
-> 但因为走的是标准 MCP 协议，任何支持 `say` / `play_action` 的桌宠都能接。
+> **本项目基于 [蓝色大肥鱼](https://github.com/Bai-Cute/big-blue-fish-desktop-pet) 的 MCP 接口开发。**
+>
+> - 原作者：**[Bai-Cute](https://github.com/Bai-Cute)**
+> - 原项目：[Bai-Cute/big-blue-fish-desktop-pet](https://github.com/Bai-Cute/big-blue-fish-desktop-pet)（Apache License 2.0）
+> - 桌宠形象、动画素材、人格设定的版权均归原作者所有
+>
+> 本项目是**独立的第三方程序**，不包含原项目的任何源代码或美术素材，
+> 仅通过原项目公开的 MCP 协议进行通信。使用前请自行安装原桌宠。
+>
+> 因为走的是标准 MCP 协议，任何支持 `say` / `play_action` 的桌宠都能接。
 
 ---
 
@@ -143,6 +151,43 @@ A：Windows 上把启动命令丢进 `shell:startup` 目录即可（做一个 `.
 - [ ] 贡献图情绪联动：绿格子多就活泼，断更就蔫
 - [ ] 桌面通知兜底（桌宠没开时用系统通知）
 - [ ] 多桌宠适配层
+
+---
+
+## 致谢 / Credits
+
+### 上游项目
+
+本项目的存在前提是 **[蓝色大肥鱼（Big Blue Fish）](https://github.com/Bai-Cute/big-blue-fish-desktop-pet)**。
+
+| | |
+|---|---|
+| **原作者** | [Bai-Cute](https://github.com/Bai-Cute) |
+| **项目地址** | https://github.com/Bai-Cute/big-blue-fish-desktop-pet |
+| **许可证** | Apache License 2.0 |
+| **本项目使用的部分** | 公开的 MCP 接口（`say`、`play_action` 工具）与其动作名称 |
+
+**明确的边界：**
+
+- 本项目**没有**复制、修改或再分发原项目的任何源代码
+- 本项目**没有**包含原项目的任何美术素材（动画 WebM、图标、角色立绘）
+- 本项目**没有**修改原项目的运行时
+- 桌宠的形象、动画、人格设定、台词，版权全部归原作者
+- 本项目仅通过原作者主动开放的 MCP 协议与其通信，属于对公开接口的正常调用
+
+如果你喜欢这个项目，请先去给[原项目](https://github.com/Bai-Cute/big-blue-fish-desktop-pet)点个 star——
+**没有那条鱼，这个项目根本不存在。**
+
+### 依赖
+
+无第三方运行时依赖，仅使用 Python 标准库。
+
+`config.example.json` 里的动作名称（如「工作状态-雀跃庆祝」）来自原项目的动作表，
+仅作为默认配置值使用，可通过修改配置换成任意动作。
+
+### 本项目
+
+由 [jingdq11-web](https://github.com/jingdq11-web) 开发，MIT License。
 
 ---
 
