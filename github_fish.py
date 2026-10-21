@@ -514,10 +514,23 @@ def main():
     lock = single_instance()
     if not lock:
         log("已有一个 github-fish 在运行，退出")
+        # 重复双击时也要有反馈，否则用户以为没启动成功又点一次
+        if pet:
+            pet.say("我已经在盯着了，不用再叫我一遍")
         return 0
 
     interval = max(30, int(cfg["github"].get("poll_interval", 90)))
     log("开始监控，轮询间隔 %d 秒。Ctrl+C 退出。" % interval)
+
+    # 启动时给个明确反馈。
+    # 这个程序是后台静默运行的（pythonw 无窗口），如果不主动说一句，
+    # 用户双击快捷方式后会以为"什么都没发生"。
+    if pet:
+        who = cfg["github"].get("user") or "、".join(cfg["github"].get("repos", []))
+        ok = pet.say("门卫上班了，我盯着 %s 呢" % who)
+        pet.play(cfg.get("actions", {}).get("star", ""))
+        log("启动提示: %s" % ("已让桌宠播报" if ok else "发送失败"))
+
     try:
         while True:
             try:
